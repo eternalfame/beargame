@@ -1,6 +1,7 @@
 local hero = {
     x=nil,
     y=nil,
+    node=nil,
     path = {},
     image = love.graphics.newImage("img/hero.png"),
     frame = 0,
@@ -18,7 +19,7 @@ local hero = {
     },
     del = 1,
     dead = false,
-    opacity = 255,
+    opacity = 1,
 }
 
 require('globals')
@@ -50,10 +51,11 @@ end
 function hero:place(ol_x, ol_y)
     self.x = ol_x
     self.y = ol_y
+
+    self.node = world.nodes:get(ol_x / world.block_size, ol_y / world.block_size)
 end
 
 function hero:setTarget(goal)
---    table.clear(self.goal)
     if not (self.goal.x and self.goal.y) then
         self.new_goal.x = goal.x
         self.new_goal.y = goal.y
@@ -95,17 +97,7 @@ function hero:find()
 end
 
 function hero:getNode()
-    local function_x, function_y
-
-    function_x = self.align == 'r' and m_floor or m_ceil
-    function_y = self.valign == 't' and m_ceil or m_floor
-
-    local hero_node = nodes:get(
-        function_x(self.x / world.block_size),
-        function_y(self.y / world.block_size)
-    )
-
-    return hero_node
+    return self.node
 end
 
 function hero:nextFrame()
@@ -141,16 +133,16 @@ function hero:stop()
 end
 
 function hero:updateFrame()
-    love.graphics.setCanvas(self.model)
-    love.graphics.clear()
-    love.graphics.setBlendMode('alpha')
-    love.graphics.setColor(255, 255, 255, self.opacity)
-    if self.align == 'r' then
-        love.graphics.draw(self.image, self:currentFrame(), 0, 0, 0, world.block_size/t_size, world.block_size/t_size)
-    else
-        love.graphics.draw(self.image, self:currentFrame(), world.block_size, 0, 0, -world.block_size/t_size, world.block_size/t_size)
-    end
-    love.graphics.setCanvas()
+    self.model:renderTo(function ()
+        love.graphics.clear()
+        love.graphics.setBlendMode('alpha')
+        love.graphics.setColor(255, 255, 255, self.opacity)
+        if self.align == 'r' then
+            love.graphics.draw(self.image, self:currentFrame(), 0, 0, 0, world.block_size/t_size, world.block_size/t_size)
+        else
+            love.graphics.draw(self.image, self:currentFrame(), world.block_size, 0, 0, -world.block_size/t_size, world.block_size/t_size)
+        end
+    end)
 end
 
 function hero:process()
@@ -159,11 +151,7 @@ function hero:process()
     end
 
     if not self.dead then
-
-        local self_node, node_x, node_y
-        local function_x, function_y
-
-        self_node = self:getNode()
+        local self_node = self:getNode()
 
         if self.path[self_node] then
             if self.frame % 7 == 0 then
@@ -172,7 +160,6 @@ function hero:process()
                 step:setPosition(self.x / 400, self.y / 400, 0)
                 step:play()
             end
-
 
             local next_node = self.path[self_node]
 
@@ -186,11 +173,23 @@ function hero:process()
                 self:setVAlign('t')
             end
 
-            self.x = self.x + ((next_node.x - self_node.x) * world.block_size) / self.del
-            self.y = self.y + ((next_node.y - self_node.y) * world.block_size) / self.del
-            local cond1 = self.x - (next_node.x * world.block_size)
-            local cond2 = self.y - (next_node.y * world.block_size)
-            if cond1 == 0 and cond2 == 0 then
+            local sqrt_2 = math.sqrt(2)
+            local delta_x = ((next_node.x - self_node.x) * world.block_size) / self.del
+            local delta_y = ((next_node.y - self_node.y) * world.block_size) / self.del
+
+            if (delta_x and delta_y) then
+                delta_x = delta_x / sqrt_2
+                delta_y = delta_y / sqrt_2
+            end
+
+            self.x = self.x + delta_x
+            self.y = self.y + delta_y
+            local cond1 = m_abs(self.x - (next_node.x * world.block_size))
+            local cond2 = m_abs(self.y - (next_node.y * world.block_size))
+            if cond1 < world.block_size / self.del / sqrt_2 and cond2 < world.block_size / self.del / sqrt_2 then
+                self.node = next_node
+                self.x = next_node.x * world.block_size
+                self.y = next_node.y * world.block_size
                 if self.goal ~= self.new_goal then
                     self.goal.x = self.new_goal.x
                     self.goal.y = self.new_goal.y
@@ -210,16 +209,14 @@ function hero:process()
             self.goal.y = self.new_goal.y
             self:setFrame(0)
             self:stop()
-    --        end
         end
     else
         -- постепенно уменьшается яркость
-        self.opacity = check(self.opacity - 25, self.opacity, 0)
+        self.opacity = clamp(self.opacity - 0.1, self.opacity, 0)
         self:updateFrame()
         if self.opacity == 0 then
             -- смерть — печальная штука
             table.clear(self)
---            self = nil
         end
     end
 end

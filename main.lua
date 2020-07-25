@@ -1,12 +1,7 @@
-camera = {}
-camera.layers = {}
-camera.x = 0
-camera.y = 0
-local debug = true
-
 local mainTimer = 0
 local mainTimer2 = 0
 
+local camera = require('camera')
 local world = require('world')
 local hero = require('hero')
 local girl = deepcopy(require('girl'))
@@ -27,167 +22,60 @@ local max_c_y = 0
 local table = require('ext_table')
 local music = require('music')
 
-setmetatable(_G, {__index =
-function(t, k)
-    if k == 'TILE_GROUND' then
-        local arr = {TILE_GRASS, TILE_GRASS2}
-        return arr[love.math.random(#arr)]
-    elseif k == 'TILE_FOREST' then
-        local arr = {TILE_TREE, TILE_TREE2, TILE_PINE}
-        return arr[love.math.random(#arr)]
-    end
-end
-})
-
-local UNWALKABLE = {
-    TILE_TREE,
-    TILE_TREE2,
-    TILE_STONE,
-    TILE_BLACK,
-    TILE_PINE,
-    TILE_HOUSE
-}
-
-function walkable(tile)
-    if tile ~= nil and table.not_in(UNWALKABLE, tile) then
-        return true
-    end
-    return false
-end
-
 function load_tiles()
-	local t_img = love.graphics.newImage("img/tiles.png")
-	t_img:setFilter("nearest", "linear")
+    local t_img = love.graphics.newImage("img/tiles.png")
+    t_img:setFilter("nearest", "linear")
     local tile_count = t_img:getWidth() / t_img:getHeight()
-  	-- wall
-	for i = 0, tile_count do
-		t_quads[i] = love.graphics.newQuad(i * t_size, 0, t_size, t_size, t_img:getWidth(), t_img:getHeight())
-	end
-	
-	local t_count = (scr_w_b + 1) * (scr_h_b + 1)
+    -- wall
+    for i = 0, tile_count do
+        t_quads[i] = love.graphics.newQuad(i * t_size, 0, t_size, t_size, t_img:getWidth(), t_img:getHeight())
+    end
 
-	return love.graphics.newSpriteBatch(t_img, t_count)
+    local t_count = (scr_w_b + 1) * (scr_h_b + 1)
+
+    return love.graphics.newSpriteBatch(t_img, t_count)
 end
 
 function update_tiles(layer, tileset)
+    tileset:clear()
+    local _i = m_floor(camera.y / world.block_size)
+    local _j = m_floor(camera.x / world.block_size)
+    local __i = _i + scr_h_b
+    local __j = _j + scr_w_b
+    local _k = world.block_size / t_size
 
-	tileset:clear()
-	local _i = m_floor(camera.y / world.block_size)
-	local _j = m_floor(camera.x / world.block_size)	
-	local __i = _i + scr_h_b
-	local __j = _j + scr_w_b
-	local _k = world.block_size / t_size
-
-	for i = _i, __i, 1 do
-		local y1 = i * world.block_size	
-		for j = _j, __j, 1 do
-			local x1 = j * world.block_size
-			if layer == 0 then
-				if world.map[i] and world.map[i][j] ~= nil then
-					tileset:add(t_quads[world.map[i][j]], x1, y1, 0, _k, _k)
-				end
-			elseif layer == 3 then
-				-- grid
-				tileset:add(t_quads[TILE_GRID], x1, y1, 0, _k, _k)
-			end
-		end
-	end
---	if layer == 0 then
---		tileset:add(t_quads[3], 0, exit_y, 0, _k, _k)
---		tileset:add(t_quads[3], exit_x, exit_y, 0, _k, _k)
---	end
-end
-
-function camera:set()
-	  love.graphics.push()
-	  love.graphics.translate(-self.x, -self.y)
-end
-
-function camera:unset()
-  	love.graphics.pop()
-end
-
-function camera:newLayer(index, func)
-	table.insert(self.layers, {draw = func, index = index})
-	table.sort(self.layers, function(a, b) return a.index < b.index end)
-end
-
-function camera:draw()
-	for _, v in pairs(self.layers) do
-		self:set()
-		v.draw()
-		self:unset()
-	end
-end
-
-function camera:move(dx, dy)
-	self.x = self.x + (dx or 0)
-	self.y = self.y + (dy or 0)
-end
-
-function camera:setPosition(x, y)
-    self.x = x or self.x
-	self.y = y or self.y
-end
-
-function nodes:generate_nodes()
-    table.clear(self.nodes)
-	for i = 1, world.height, 1 do
-		for j = 1, world.width, 1 do
-			if walkable(world.map[i][j]) then
-				local temp = {
-					x = j,
-					y = i
-				}
-				table.insert(self.nodes, temp)
-			end
-		end
-	end
-end
-
-function nodes:get(x, y)
-    for _, node in ipairs(self.nodes) do
-        if node.x == x and node.y == y then
-            return node
+    for i = _i, __i, 1 do
+        local y1 = i * world.block_size
+        for j = _j, __j, 1 do
+            local x1 = j * world.block_size
+            if layer == 0 then
+                if world.map[i] and world.map[i][j] ~= nil then
+                    tileset:add(t_quads[world.map[i][j]], x1, y1, 0, _k, _k)
+                end
+            elseif layer == 3 then
+                -- grid
+                tileset:add(t_quads[TILE_GRID], x1, y1, 0, _k, _k)
+            end
         end
     end
-
-	return nil
 end
 
-function nodes:get_four(array, _array)
-	local nodes = {}
-	for _, node in ipairs(self.nodes) do
-		for i = 1, _array do
-			if node.x == array[i].x and node.y == array[i].y then
-				table.insert(nodes, node)
-			end
-		end
-		if #nodes == _array then
-			return nodes
-		end
-	end
-	return nodes
-end
-
-
-
-function check(x, max, min)
-	if x > max then
-		x = max	
-	end		
-	if x < min then
-		x = min
-	end
-	return x
+function clamp(x, max, min)
+    if x > max then
+        x = max
+    end
+    if x < min then
+        x = min
+    end
+    return x
 end
 
 function sign(x)
-	if x ~= 0 then
-		return math.floor(x / math.abs(x))
-	else 
-		return 0
-	end
+    if x ~= 0 then
+        return math.floor(x / math.abs(x))
+    else
+        return 0
+    end
 end
 
 function love.load()
@@ -207,7 +95,7 @@ function love.load()
             func = function ()
                 hero.del = 48
                 girl.del = 48
-                if walkable(world.map[girl.y / world.block_size - 2][girl.x / world.block_size]) then
+                if world:walkable(girl.x / world.block_size, girl.y / world.block_size - 2) then
                     girl:setTarget({x = girl.x, y = girl.y - world.block_size * 2})
                 else
                     girl:setTarget({x = girl.x, y = girl.y - world.block_size * 3})
@@ -294,19 +182,18 @@ function love.load()
 
     music:stop_second()
     music:play_first()
---    love.window.setFullscreen(true, "desktop")
 
-	love.keyboard.setKeyRepeat(false)
+    love.keyboard.setKeyRepeat(false)
 
-	love.graphics.setBackgroundColor(155, 155, 155)
+    love.graphics.setBackgroundColor(155, 155, 155)
 
     world:init()
     world:generate()
 
-	scr_h = love.graphics.getHeight()
-	scr_w = love.graphics.getWidth()
-	scr_h_b = m_ceil(scr_h / world.block_size)
-	scr_w_b = m_ceil(scr_w / world.block_size)
+    scr_h = love.graphics.getHeight()
+    scr_w = love.graphics.getWidth()
+    scr_h_b = m_ceil(scr_h / world.block_size)
+    scr_w_b = m_ceil(scr_w / world.block_size)
 
     hero:init()
     if not table.not_empty(girl) then
@@ -335,34 +222,34 @@ function love.load()
             )
         end
     end
-	
-	max_c_x = (world.width + 1) * world.block_size - scr_w
-	max_c_y = (world.height + 1) * world.block_size - scr_h
-	
-	local f = love.graphics.newFont("FreeSans.ttf", 16)
-	love.graphics.setFont(f)
 
-	local tileset = load_tiles()
+    max_c_x = (world.width + 1) * world.block_size - scr_w
+    max_c_y = (world.height + 1) * world.block_size - scr_h
+
+    local f = love.graphics.newFont("FreeSans.ttf", 16)
+    love.graphics.setFont(f)
+
+    local tileset = load_tiles()
 
     girl:place(hero.x, hero.y + world.block_size * 7)
 
-	table.clear(camera.layers)
+    table.clear(camera.layers)
 
-	camera:newLayer(0, function()
-        love.graphics.setColor(world.r, world.g, world.b, 255)
+    camera:newLayer(0, function()
+        love.graphics.setColor(world.r, world.g, world.b, 1)
         update_tiles(0, tileset)
-		love.graphics.draw(tileset)
-	end)
+        love.graphics.draw(tileset)
+    end)
 
-	camera:newLayer(1, function ()
+    camera:newLayer(1, function ()
         if pointer:exists() then
-            love.graphics.setColor(255, 255, 255, 255)
+            love.graphics.setColor(255, 255, 255, 1)
             love.graphics.draw(pointer.model, pointer.x, pointer.y)
         end
-	end)
+    end)
 
     camera:newLayer(2, function()
-		love.graphics.setColor(255, 255, 255, 255)
+        love.graphics.setColor(255, 255, 255, 1)
 
         if table.not_empty(girl) then
             love.graphics.draw(girl.model, girl.x, girl.y)
@@ -385,21 +272,17 @@ function love.load()
         local text = conversation:getCurrent()
 
         if text and text.talker then
-            love.graphics.printf(
-                text.text,
-                text.talker.x + world.block_size/2 - 16*7,
-                text.talker.y - 16 * text.height or 1 * 1.5 ,
-                32 * 7,
-                "center"
-            )
+            local text_x = text.talker.x + world.block_size/2 - 16*7
+            local text_y = text.talker.y - 16 * text.height or 1 * 1.5
+            local text_w = 16 * 14
+            local font_size = 19
+
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.rectangle("fill", text_x - 10, text_y, text_w + 20, text.height * font_size + 10)
+            love.graphics.setColor(255, 255, 255, 1)
+            love.graphics.printf(text.text, text_x, text_y, text_w, "center")
         end
-	end)
-
---	camera:newLayer(3, function()
---		update_tiles(3, tileset)
---		love.graphics.draw(tileset)
---	end)
-
+    end)
 end
 
 function love.update(dt)
@@ -408,9 +291,9 @@ function love.update(dt)
     if not intro then
         if mainTimer >= STEP_TIME then
             if table.not_empty(girl) then
-                if m_abs(girl.x - world.house_x * world.block_size) +
-                        m_abs(girl.y - world.house_y * world.block_size) < 15 * world.block_size then
-                    world.r = check (world.r - 10, world.r, 5)
+                if world:distance(girl, {x=world.house_x * world.block_size, y=world.house_y * world.block_size})
+                        < 4 * world.block_size then
+                    world.r = clamp(world.r - 10, world.r, 5)
                     mouse_blocked = true
                     happyend = true
 
@@ -428,7 +311,7 @@ function love.update(dt)
                     for _, _c in pairs(__pairs) do
                         local _x = world.house_x + _c.x
                         local _y = world.house_y + _c.y
-                        if world.map[_y] and walkable(world.map[_y][_x]) then
+                        if world:walkable(_x, _y) then
                             target_x = _x * world.block_size
                             target_y = _y * world.block_size
                         end
@@ -439,7 +322,7 @@ function love.update(dt)
                         x = target_x,
                         y = target_y
                     })
-                    if math.abs(hero.x - girl.x) + math.abs(hero.y - girl.y) <= world.block_size * 3 then
+                    if world:distance(hero, girl) <= world.block_size * 2 then
                         hero:stop()
                     else
                         hero:setTarget({
@@ -447,34 +330,37 @@ function love.update(dt)
                             y = girl.y
                         })
                     end
-                elseif m_abs(girl.x - hero.x) + m_abs(girl.y - hero.y) > 5 * world.block_size then
+                elseif not happyend and world:distance(girl, hero) > 3 * world.block_size then
                     girl:setTarget({
                         x = hero.x,
                         y = hero.y
                     })
-                else
+                elseif not happyend then
                     girl:stop()
                 end
                 girl:process()
             end
             hero:process()
-            for _, enemy in ipairs(enemies) do
-                if table.not_empty(enemy) and table.not_empty(girl) then
-                    distance_to_trigger_enemy = 25  -- todo: must be dependent on screen resolution
 
-                    if m_abs(enemy.x - girl.x) + m_abs(enemy.y - girl.y) < distance_to_trigger_enemy * world.block_size then
-                        enemy:setTarget(girl)
-                        if m_abs(enemy.x - girl.x) + m_abs(enemy.y - girl.y) < world.block_size then
-                            mouse_blocked = true
-                            conversation:printLose()
-                            enemies:kill(girl)
-                            world.g = check(world.g - 10, world.g, 5)
-                            world.b = check(world.b - 10, world.b, 5)
+            if not happyend then
+                for _, enemy in ipairs(enemies) do
+                    if table.not_empty(enemy) and table.not_empty(girl) then
+                        local distance_to_trigger_enemy = 25  -- todo: must depend on screen resolution
+
+                        if world:distance(enemy, girl) < distance_to_trigger_enemy * world.block_size then
+                            enemy:setTarget({x=girl.x, y=girl.y})
+                            if world:distance(enemy, girl) < world.block_size then
+                                mouse_blocked = true
+                                conversation:printLose()
+                                enemies:kill(girl)
+                                world.g = clamp(world.g - 10, world.g, 5)
+                                world.b = clamp(world.b - 10, world.b, 5)
+                            end
                         end
+                        enemy:process()
+                    else
+                        enemy = nil
                     end
-                    enemy:process()
-                else
-                    enemy = nil
                 end
             end
             for _, flash in ipairs(flashes) do
@@ -499,14 +385,14 @@ function love.update(dt)
             mainTimer2 = mainTimer2 - STEP_TIME*2
         end
     end
-	local cam_x = check(hero.x + world.block_size / 2  - scr_w / 2, max_c_x, world.block_size)
-	local cam_y = check(hero.y + world.block_size / 2 - scr_h / 2, max_c_y, world.block_size)
-	camera:setPosition(cam_x, cam_y)
+    local cam_x = clamp(hero.x + world.block_size / 2  - scr_w / 2, max_c_x, world.block_size)
+    local cam_y = clamp(hero.y + world.block_size / 2 - scr_h / 2, max_c_y, world.block_size)
+    camera:setPosition(cam_x, cam_y)
 
 end
 
 function love.draw()
-	camera:draw()
+    camera:draw()
     if debug then
         local s_format = string.format
         love.graphics.print("FPS: " .. love.timer.getFPS(), 2, 2)
@@ -520,31 +406,18 @@ function love.draw()
     end
 end
 
-function love.keypressed(key, isrepeat)
---	if isrepeat and keyTimer > 0.15 or not isrepeat then
---		if key == "up" or key == "w" then
---			hero:move(0, -1)
---		elseif key == "left" or key == "a" then
---			hero:move(-1, 0)
---		elseif key == "down" or key == "s" then
---			hero:move(0, 1)
---		elseif key == "right" or key == "d" then
---			hero:move(1, 0)
-        if key == "escape" then
-            love.event.quit()
-        elseif key == 'r' and not intro then
-            for _, enemy in ipairs(enemies) do
-                table.clear(enemy)
-                enemy = nil
-            end
-            love.load()
-        elseif key == 'd' then
-            debug = true
+function love.keypressed(key, _, isrepeat)
+    if key == "escape" then
+        love.event.quit()
+    elseif key == 'r' and not intro then
+        for _, enemy in ipairs(enemies) do
+            table.clear(enemy)
+            enemy = nil
         end
---		if isrepeat then
---			keyTimer = 0
---		end
---	end
+        love.load()
+    elseif key == 'd' then
+        debug = true
+    end
 end
 
 function love.mousepressed(x, y, button)

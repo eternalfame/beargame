@@ -1,32 +1,17 @@
-block_size = 48
-t_size = 64
+block_size = 48  -- responsible for zoom level
+t_size = 64 -- responsible for texture size
+
+debug = true
 
 m_abs = math.abs
 m_pow = math.pow
 m_ceil = math.ceil
 m_floor = math.floor
 
-nodes = {
-    nodes = {}
-}
 tiles = {}
 t_quads = {}
 
-dbug = ""
-
 time_delta1 = 0
-
---olya = {}
---world = {}
-
-TILE_TREE  = 0
-TILE_GRASS = 1
-TILE_GRASS2= 2
-TILE_BLACK = 3
-TILE_STONE = 4
-TILE_PINE  = 5
-TILE_HOUSE = 6
-TILE_TREE2 = 7
 
 STEP_TIME = 0.03
 
