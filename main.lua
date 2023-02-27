@@ -346,10 +346,12 @@ function love.update(dt)
                 for _, enemy in ipairs(enemies) do
                     if table.not_empty(enemy) and table.not_empty(girl) then
                         local distance_to_trigger_enemy = 25  -- todo: must depend on screen resolution
+                        local distance_to_kill = 1
+                        local distance_to_girl = world:distance(enemy, girl)
 
-                        if world:distance(enemy, girl) < distance_to_trigger_enemy * world.block_size then
+                        if distance_to_girl < distance_to_trigger_enemy * world.block_size then
                             enemy:setTarget({x=girl.x, y=girl.y})
-                            if world:distance(enemy, girl) < world.block_size then
+                            if distance_to_girl < distance_to_kill * world.block_size then
                                 mouse_blocked = true
                                 conversation:printLose()
                                 enemies:kill(girl)

@@ -7,6 +7,10 @@ local table = require('ext_table')
 local INF = 1/0
 
 local function cost_estimate(start, goal)
+    return math.max(math.abs(start.x - goal.x), math.abs(start.y - goal.y))
+end
+
+local function real_distance(start, goal)
     return world:distance(start, goal)
 end
 
@@ -57,13 +61,11 @@ end
 
 function a_star:find(from, to)
     local b_s = world.block_size
-    local round_func = self.align == 'r' and m_floor or m_ceil
-    local start = world.nodes:get(round_func(from.x / b_s), round_func(from.y / b_s))
+    local start = world.nodes:get(m_floor(from.x / b_s), m_floor(from.y / b_s))
     local goal = world.nodes:get(m_floor(to.x / b_s), m_floor(to.y / b_s))
     if not goal then
         return {}
     end
-    local closed = {}
     local open = {
         start
     }
@@ -80,20 +82,17 @@ function a_star:find(from, to)
             return reconstruct(map, goal, start)
         end
         table.remove_node(open, current)
-        closed[#closed+1] = current
         local neighbours = neighbor_nodes(current)
         for i = 1, #neighbours do
             local ngh = neighbours[i]
             if ngh then
-                if table.not_in(closed, ngh) then
-                    local ten_g_s = g_score[current]
-                    if table.not_in(open, ngh) or ten_g_s < g_score[ngh] then
-                        map[ngh] = current
-                        g_score[ngh] = ten_g_s
-                        f_score[ngh] = g_score[ngh] + cost_estimate(ngh, goal)
-                        if table.not_in(open, ngh) then
-                            open[#open+1] = ngh
-                        end
+                local ten_g_s = g_score[current] + real_distance(current, ngh)
+                if not g_score[ngh] or ten_g_s < g_score[ngh] then
+                    map[ngh] = current
+                    g_score[ngh] = ten_g_s
+                    f_score[ngh] = g_score[ngh] + cost_estimate(ngh, goal)
+                    if table.not_in(open, ngh) then
+                        open[#open+1] = ngh
                     end
                 end
             end

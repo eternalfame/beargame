@@ -27,6 +27,7 @@ local a_star = require('a_star')
 local world = require('world')
 local table = require('ext_table')
 local pointer = require('pointer')
+local sqrt_2 = math.sqrt(2)
 
 function hero:currentFrame()
     return self.frames[self.orient][self.frame]
@@ -173,12 +174,13 @@ function hero:process()
                 self:setVAlign('t')
             end
 
-            local sqrt_2 = math.sqrt(2)
             local delta_x = ((next_node.x - self_node.x) * world.block_size) / self.del
             local delta_y = ((next_node.y - self_node.y) * world.block_size) / self.del
 
-            if (delta_x and delta_y) then
+            if delta_x then
                 delta_x = delta_x / sqrt_2
+            end
+            if delta_y then
                 delta_y = delta_y / sqrt_2
             end
 
@@ -190,7 +192,7 @@ function hero:process()
                 self.node = next_node
                 self.x = next_node.x * world.block_size
                 self.y = next_node.y * world.block_size
-                if self.goal ~= self.new_goal then
+                if self.goal.x ~= self.new_goal.x or self.goal.y ~= self.new_goal.y then
                     self.goal.x = self.new_goal.x
                     self.goal.y = self.new_goal.y
                     self:find()
