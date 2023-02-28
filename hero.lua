@@ -27,15 +27,17 @@ local a_star = require('a_star')
 local world = require('world')
 local table = require('ext_table')
 local pointer = require('pointer')
-local sqrt_2 = math.sqrt(2)
 
 function hero:currentFrame()
     return self.frames[self.orient][self.frame]
 end
 
+function hero:setSpeed(speed)
+    self.del = 48.0 / speed
+end
 
 function hero:init()
-    self.del = 8
+    self:setSpeed(6)
     local t_img = self.image
     t_img:setFilter("nearest", "linear")
     self.tile_count = (t_img:getWidth() * 3) / t_img:getHeight()
@@ -177,18 +179,11 @@ function hero:process()
             local delta_x = ((next_node.x - self_node.x) * world.block_size) / self.del
             local delta_y = ((next_node.y - self_node.y) * world.block_size) / self.del
 
-            if delta_x then
-                delta_x = delta_x / sqrt_2
-            end
-            if delta_y then
-                delta_y = delta_y / sqrt_2
-            end
-
             self.x = self.x + delta_x
             self.y = self.y + delta_y
             local cond1 = m_abs(self.x - (next_node.x * world.block_size))
             local cond2 = m_abs(self.y - (next_node.y * world.block_size))
-            if cond1 < world.block_size / self.del / sqrt_2 and cond2 < world.block_size / self.del / sqrt_2 then
+            if cond1 < world.block_size / self.del and cond2 < world.block_size / self.del then
                 self.node = next_node
                 self.x = next_node.x * world.block_size
                 self.y = next_node.y * world.block_size

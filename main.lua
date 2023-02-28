@@ -79,6 +79,8 @@ function sign(x)
 end
 
 function love.load()
+    love.window.setVSync( 1 )
+
     happyend = false
     if intro then
         mouse_blocked = true
@@ -93,8 +95,9 @@ function love.load()
         {
             timer = 1,
             func = function ()
-                hero.del = 48
-                girl.del = 48
+                -- walk slowly in intro
+                hero:setSpeed(1.0)
+                girl:setSpeed(1.0)
                 if world:walkable(girl.x / world.block_size, girl.y / world.block_size - 2) then
                     girl:setTarget({x = girl.x, y = girl.y - world.block_size * 2})
                 else
@@ -157,8 +160,8 @@ function love.load()
         {
             timer = 0,
             func = function ()
-                hero.del = 8  -- change for debug purposes
-                girl.del = 8
+                hero:setSpeed(6.0)  -- change for debug purposes
+                girl:setSpeed(6.0)
                 intro = false
                 mouse_blocked = false
                 conversation:clearQueue()
@@ -316,8 +319,8 @@ function love.update(dt)
                             target_y = _y * world.block_size
                         end
                     end
-                    girl.del = 12
-                    hero.del = 24
+                    girl:setSpeed(4.0)
+                    hero:setSpeed(2.0)
                     girl:setTarget({
                         x = target_x,
                         y = target_y
@@ -339,6 +342,11 @@ function love.update(dt)
                     girl:stop()
                 end
                 girl:process()
+            else
+                world.g = world.g - 0.1
+                world.b = world.b - 0.1
+                mouse_blocked = true
+                hero:stop()
             end
             hero:process()
 
@@ -352,11 +360,8 @@ function love.update(dt)
                         if distance_to_girl < distance_to_trigger_enemy * world.block_size then
                             enemy:setTarget({x=girl.x, y=girl.y})
                             if distance_to_girl < distance_to_kill * world.block_size then
-                                mouse_blocked = true
                                 conversation:printLose()
                                 enemies:kill(girl)
-                                world.g = clamp(world.g - 10, world.g, 5)
-                                world.b = clamp(world.b - 10, world.b, 5)
                             end
                         end
                         enemy:process()

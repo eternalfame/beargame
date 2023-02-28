@@ -88,9 +88,9 @@ function world:init()
     self.height = 200
     self.block_size = block_size
     self.enemy_spawns = {}
-    self.r = 255
-    self.g = 255
-    self.b = 255
+    self.r = 1
+    self.g = 1
+    self.b = 1
 
     self.nodes = nodes
 end

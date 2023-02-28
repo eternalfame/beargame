@@ -15,7 +15,7 @@ function enemy:init()
     for i = 1, table.length(world.enemy_spawns) do
         self[i] = deepcopy(hero)
         self[i].image = love.graphics.newImage("img/inverted.png")
-        self[i].del = 8
+        self[i]:setSpeed(6.0)
     end
 end
 
