@@ -1,4 +1,4 @@
-block_size = 6  -- responsible for zoom level
+block_size = 48  -- responsible for zoom level
 t_size = 64 -- responsible for texture size
 
 debug = true
