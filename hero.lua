@@ -149,47 +149,51 @@ function hero:updateFrame()
 end
 
 function hero:process()
+	local block_size = world.block_size
+	local m_abs = math.abs
+
     if self == hero then
         love.audio.setPosition(self.x / 400, self.y / 400, 0)
     end
 
     if not self.dead then
         local self_node = self:getNode()
+		local path_node = self.path[self_node]
 
-        if self.path[self_node] then
+        if path_node then
             if self.frame % 7 == 0 then
-                local step = love.audio.newSource("fx/step.ogg", "static")
-                step:setVolume(0.025)
-                step:setPosition(self.x / 400, self.y / 400, 0)
-                step:play()
+				if not self.step_sound then
+					self.step_sound = love.audio.newSource("fx/step.ogg", "static")
+					self.step_sound:setVolume(0.025)
+				end
+                self.step_sound:setPosition(self.x / 400, self.y / 400, 0)
+                self.step_sound:play()
             end
-
-            local next_node = self.path[self_node]
-
-            if self_node.x < next_node.x then
-                self:setAlign('r')
-            elseif self_node.x > next_node.x then
-                self:setAlign('l')
-            elseif self_node.y < next_node.y then
-                self:setVAlign('b')
-            elseif self_node.y > next_node.y then
-                self:setVAlign('t')
-            end
-
-            local delta_x = ((next_node.x - self_node.x) * world.block_size) / self.del
-            local delta_y = ((next_node.y - self_node.y) * world.block_size) / self.del
-
-            self.x = self.x + delta_x
-            self.y = self.y + delta_y
-            local cond1 = m_abs(self.x - (next_node.x * world.block_size))
-            local cond2 = m_abs(self.y - (next_node.y * world.block_size))
-            if cond1 < world.block_size / self.del and cond2 < world.block_size / self.del then
-                self.node = next_node
-                self.x = next_node.x * world.block_size
-                self.y = next_node.y * world.block_size
+			
+			-- Alignment logic
+			if self_node.x ~= path_node.x then
+				self:setAlign(self_node.x < path_node.x and 'r' or 'l')
+			elseif self_node.y ~= path_node.y then
+				self:setVAlign(self_node.y < path_node.y and 'b' or 't')
+			end
+			
+			-- Move towards next node
+			local delta = block_size / self.del
+			self.x = self.x + (path_node.x - self_node.x) * delta
+			self.y = self.y + (path_node.y - self_node.y) * delta
+			
+			-- Snap if close enough
+			local dx = m_abs(self.x - path_node.x * block_size)
+			local dy = m_abs(self.y - path_node.y * block_size)
+			if dx < delta and dy < delta then
+                self.node = path_node
+				self.x = path_node.x * block_size
+				self.y = path_node.y * block_size
+				
+				-- If the goal changed during the movement, recalculate the path
                 if self.goal.x ~= self.new_goal.x or self.goal.y ~= self.new_goal.y then
-                    self.goal.x = self.new_goal.x
-                    self.goal.y = self.new_goal.y
+					self.goal.x = self.new_goal.x
+					self.goal.y = self.new_goal.y
                     self:find()
                 end
             end
@@ -197,13 +201,11 @@ function hero:process()
             self:nextFrame()
         else
             if self_node then
-                self.x = self_node.x * world.block_size
-                self.y = self_node.y * world.block_size
+				self.x = self_node.x * block_size
+				self.y = self_node.y * block_size
             end
-            self.new_goal.x = nil
-            self.new_goal.y = nil
-            self.goal.x = self.new_goal.x
-            self.goal.y = self.new_goal.y
+			self.new_goal.x, self.new_goal.y = nil, nil
+			self.goal.x, self.goal.y = nil, nil
             self:setFrame(0)
             self:stop()
         end
