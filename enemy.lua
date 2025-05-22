@@ -1,39 +1,53 @@
 require('globals')
-local hero = require('hero')
+local BaseActor = require('baseActor')
 local world = require('world')
 local table = require('ext_table')
 
--- наследуем врага от героя
-local enemy = {
-    sounds = {
-        dead = love.audio.newSource("fx/death.ogg", "static")
-    }
-}
+local Enemy = {}
+Enemy.__index = Enemy
 
-function enemy:init()
+Enemy.sounds = {
+    dead = love.audio.newSource("fx/death.ogg", "static")
+}
+Enemy.instances = {}  -- store all enemy instances here
+
+function Enemy.new()
+    local self = setmetatable({}, Enemy)
+
+    self:init()
+    return self
+end
+
+function Enemy:init()
     self.sounds.dead:setVolume(0.5)
-    for i = 1, table.length(world.enemy_spawns) do
-        self[i] = deepcopy(hero)
-        self[i].image = love.graphics.newImage("img/inverted.png")
-        self[i]:setSpeed(6.0)
+
+    for i, spawn in ipairs(world.enemy_spawns) do
+        local enemy = BaseActor:new()
+        enemy.image = love.graphics.newImage("img/inverted.png")
+        enemy:init()
+        enemy:setSpeed(6.0)
+        enemy:place(spawn.x, spawn.y)
+        table.insert(self.instances, enemy)
     end
 end
 
-function enemy:get(x, y)
-    for _, instance in ipairs(self) do
-        if table.length(instance) > 0 then
-            local i_x = instance.x
-            local i_y = instance.y
-            if math.abs(x - i_x) < world.block_size and math.abs(i_y - y) < world.block_size then
+function Enemy:get(x, y)
+    for _, instance in ipairs(self.instances) do
+        if instance and not instance.dead then
+            local dx = math.abs(x - instance.x)
+            local dy = math.abs(y - instance.y)
+            if dx < world.block_size and dy < world.block_size then
                 return instance
             end
+        else
+            table.remove_node(self.instances, instance)
         end
     end
     return nil
 end
 
-function enemy:kill(instance)
-    if instance then
+function Enemy:kill(instance)
+    if instance and not instance.dead then
         self.sounds.dead:stop()
         self.sounds.dead:setPosition(instance.x / 400, instance.y / 400, 0)
         self.sounds.dead:play()
@@ -42,4 +56,4 @@ function enemy:kill(instance)
     end
 end
 
-return enemy
+return Enemy

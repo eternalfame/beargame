@@ -1,8 +1,16 @@
-require('globals')
-local hero = require('hero')
+local BaseActor = require('baseActor')
 
--- наследуем девочку от героя
-local girl = deepcopy(hero)
-girl.image = love.graphics.newImage("img/girl.png")
+local Girl = setmetatable({}, { __index = BaseActor })
+Girl.__index = Girl
 
-return girl
+function Girl.new()
+    local self = BaseActor.new()
+    setmetatable(self, Girl)
+
+    self.image = love.graphics.newImage("img/girl.png")
+    self:init()
+
+    return self
+end
+
+return Girl

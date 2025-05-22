@@ -61,7 +61,9 @@ function nodes:generate_nodes()
 end
 
 function nodes:get(x, y)
-    return self.nodes[x][y]
+    if self.nodes[x] then
+        return self.nodes[x][y]
+    end
 end
 
 function nodes:get_many(array, _array)

@@ -1,12 +1,6 @@
-local conversation = {
-    current = nil,
-    queue = {},
-    timer = 0,
-    win = nil,
-    lose = nil
-}
-
+require('globals')
 local table = require('ext_table')
+local world = require('world')
 
 printf = function(s,...)
     return io.write(s:format(...))
@@ -60,6 +54,20 @@ local function printtable(_table, indent)
   print(string.rep('  ', indent)..'}');
 end
 
+local conversation = {}
+conversation.__index = conversation
+
+function conversation.new()
+    local self = setmetatable({}, conversation)
+
+    self.current = nil
+    self.queue = {}
+    self.timer = 0
+    self.win = nil
+    self.lose = nil
+
+    return self
+end
 
 function conversation:init()
     self:clearQueue()
@@ -146,6 +154,22 @@ function conversation:process(dt)
 
             table.remove_node_order_safe(self.queue, self.current)
         end
+    end
+end
+
+function conversation:drawCurrent()
+    local text = self:getCurrent()
+
+    if text and text.talker then
+        local text_x = text.talker.x + world.block_size/2 - 16*7
+        local text_y = text.talker.y - 16 * text.height or 1 * 1.5
+        local text_w = 16 * 14
+        local font_size = 19
+
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle("fill", text_x - 10, text_y, text_w + 20, text.height * font_size + 10)
+        love.graphics.setColor(255, 255, 255, 1)
+        love.graphics.printf(text.text, text_x, text_y, text_w, "center")
     end
 end
 
