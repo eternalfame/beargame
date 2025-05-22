@@ -16,6 +16,8 @@ local TILE_PINE  = 5
 local TILE_HOUSE = 6
 local TILE_TREE2 = 7
 
+local sqrt = math.sqrt
+
 setmetatable(_G, {
     __index = function(t, k)
         if k == 'TILE_GROUND' then
@@ -49,32 +51,27 @@ function nodes:generate_nodes()
     for i = 1, world.height, 1 do
         for j = 1, world.width, 1 do
             if world:walkable(j, i) then
-                table.insert(self.nodes, {x=j, y=i})
+                if not self.nodes[j] then
+                    self.nodes[j] = {}
+                end
+                self.nodes[j][i] = {x=j, y=i}
             end
         end
     end
 end
 
 function nodes:get(x, y)
-    for _, node in ipairs(self.nodes) do
-        if node.x == x and node.y == y then
-            return node
-        end
-    end
-
-    return nil
+    return self.nodes[x][y]
 end
 
 function nodes:get_many(array, _array)
     local nodes = {}
-    for _, node in ipairs(self.nodes) do
-        for i = 1, _array do
-            if node.x == array[i].x and node.y == array[i].y then
-                table.insert(nodes, node)
+    for i = 1, #array do
+        if self.nodes[array[i].x] then
+            local table_node = self.nodes[array[i].x][array[i].y]
+            if table_node then
+                table.insert(nodes, table_node)
             end
-        end
-        if #nodes == _array then
-            return nodes
         end
     end
     return nodes
@@ -122,7 +119,9 @@ function world:walkable(x, y)
 end
 
 function world:distance(node1, node2)
-    return math.sqrt(m_pow(node1.x - node2.x, 2) + m_pow(node1.y - node2.y, 2))
+    local dx = node1.x - node2.x
+    local dy = node1.y - node2.y
+    return sqrt(dx * dx + dy * dy)
 end
 
 function world:generate()
