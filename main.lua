@@ -429,8 +429,13 @@ end
 
 function love.mousepressed(x, y, button)
     if not mouse_blocked then
-        local temp_x = math.floor((camera.x + x) / world.block_size) * world.block_size
-        local temp_y = math.floor((camera.y + y) / world.block_size) * world.block_size
+        local block_size = world.block_size
+
+        local press_location_x = camera.x + x
+        local press_location_y = camera.y + y
+
+        local temp_x = math.floor(press_location_x / block_size) * block_size
+        local temp_y = math.floor(press_location_y / block_size) * block_size
 
         if button == 1 then
             pointer:set(temp_x, temp_y)
@@ -442,8 +447,8 @@ function love.mousepressed(x, y, button)
             hero:stop()
         elseif button == 2 then
             flash.sounds.hit:play()
-            table.insert(flashes, flash:create(temp_x, temp_y))
-            enemies:kill(enemies:get(temp_x, temp_y))
+            table.insert(flashes, flash:create(press_location_x - block_size / 2, press_location_y - block_size / 2))
+            enemies:kill(enemies:get(press_location_x, press_location_y))
         end
 
     elseif intro then
