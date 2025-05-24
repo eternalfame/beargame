@@ -51,7 +51,6 @@ local function reconstruct(map, goal, start)
         map_two[map[temp]] = temp
         temp = map[temp]
     end
-    map[temp] = nil
     return map_two
 end
 
