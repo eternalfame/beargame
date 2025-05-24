@@ -7,8 +7,9 @@ local Hero = require('hero')
 local Girl = require('girl')
 local Enemies = require('enemy')
 local pointer = require('pointer')
+local Flash = require('flash')
+---@type Flash[]
 local flashes = {}
-local flash = require('flash')
 local Conversation = require('conversation')
 
 local scr_h = 0
@@ -22,9 +23,13 @@ local max_c_y = 0
 local table = require('ext_table')
 local music = require('music')
 
+---@type Hero|nil
 hero = nil
+---@type Girl|nil
 girl = nil
+---@type Enemy|nil
 enemies = nil
+---@type Conversation
 local conversation = Conversation.new()
 
 function load_tiles()
@@ -65,27 +70,7 @@ function update_tiles(layer, tileset)
     end
 end
 
-function clamp(x, max, min)
-    if x > max then
-        x = max
-    end
-    if x < min then
-        x = min
-    end
-    return x
-end
-
-function sign(x)
-    if x ~= 0 then
-        return math.floor(x / math.abs(x))
-    else
-        return 0
-    end
-end
-
 function love.load()
-    love.window.setVSync( 1 )
-
     happyend = false
     if intro then
         mouse_blocked = true
@@ -96,6 +81,7 @@ function love.load()
     music:stop_second()
     music:play_first()
 
+    -- love.math.setRandomSeed(1)
     love.keyboard.setKeyRepeat(false)
 
     love.graphics.setBackgroundColor(155, 155, 155)
@@ -125,12 +111,10 @@ function love.load()
     hero:place(world.spawn_x * world.block_size, world.spawn_y * world.block_size)
 
     for _, enemy in ipairs(enemies.instances) do
-        if enemy then
-            enemy:place(
-                world.enemy_spawns[_].x * world.block_size,
-                world.enemy_spawns[_].y * world.block_size
-            )
-        end
+        enemy:place(
+            world.enemy_spawns[_].x * world.block_size,
+            world.enemy_spawns[_].y * world.block_size
+        )
     end
 
     conversation:setQueue({
@@ -218,7 +202,7 @@ function love.load()
         talker = hero,
         timer = 20,
         height = 4,
-        text = "C ДНЁМ РОЖДЕНИЯ!!!\nСлушай музыку\nили нажми ESC, чтобы выйти\nR, чтобы начать заново"
+        text = "УРА УРА ПОБЕДА!!!\nСлушай музыку\nили нажми ESC, чтобы выйти\nR, чтобы начать заново"
     })
 
     conversation:setLoseString({
@@ -261,15 +245,13 @@ function love.load()
         end
 
         for _, enemy in ipairs(enemies.instances) do
-            if enemy then
-                love.graphics.draw(enemy.model, enemy.x, enemy.y)
-            end
+            love.graphics.draw(enemy.model, enemy.x, enemy.y)
         end
 
         love.graphics.draw(hero.model, hero.x, hero.y)
 
         for _, flash in ipairs(flashes) do
-            if table.length(flash) > 0 then
+            if flash and flash:isActive() then
                 love.graphics.draw(flash.model, flash.x, flash.y)
             end
         end
@@ -343,32 +325,30 @@ function love.update(dt)
             hero:process()
 
             if not happyend then
-                for _, enemy in ipairs(enemies.instances) do
-                    if enemy then
-                        if not enemy.dead and girl and not girl.dead then
-                            local distance_to_trigger_enemy = 25  -- todo: must depend on screen resolution
-                            local distance_to_kill = 1
-                            local distance_to_girl = world:distance(enemy, girl)
+                for i, enemy in ipairs(enemies.instances) do
+                    if not enemy.dead and girl and not girl.dead then
+                        local distance_to_trigger_enemy = 25  -- todo: must depend on screen resolution
+                        local distance_to_kill = 1
+                        local distance_to_girl = world:distance(enemy, girl)
 
-                            if distance_to_girl < distance_to_trigger_enemy * world.block_size then
-                                enemy:setTarget({x=girl.x, y=girl.y})
-                                if distance_to_girl < distance_to_kill * world.block_size then
-                                    conversation:printLose()
-                                    enemies:kill(girl)
-                                end
+                        if distance_to_girl < distance_to_trigger_enemy * world.block_size then
+                            enemy:setTarget({x=girl.x, y=girl.y})
+                            if distance_to_girl < distance_to_kill * world.block_size then
+                                conversation:printLose()
+                                enemies:kill(girl)
                             end
                         end
-                        enemy:process()
-                    else
-                        enemy = nil
+                    end
+                    if not enemy:process() then
+                        table.remove(enemies, i)
                     end
                 end
             end
-            for i = #flashes, 1, -1 do
-                if table.length(flashes[i]) == 0 then
+            for i, flash in ipairs(flashes) do
+                if not flash or not flash:isActive() then
                     table.remove(flashes, i)
                 else
-                    flashes[i]:process()
+                    flash:process()
                 end
             end
         end
@@ -397,8 +377,9 @@ function love.draw()
     if debug then
         local s_format = string.format
         love.graphics.print("FPS: " .. love.timer.getFPS(), 2, 2)
+        love.graphics.print(s_format("A-star calculation time: %.2f", time_delta1), 2, 26)
         love.graphics.print(hero.x .. "; " .. hero.y .. '; ' .. hero.align .. ' ' .. hero.valign, 2, 50)
-        love.graphics.print('Памяти засрано: ' .. s_format("%.2f", collectgarbage('count')) .. 'kB', 2, 122)
+        love.graphics.print(s_format('Памяти засрано: %.2f', collectgarbage('count')) .. 'kB', 2, 122)
     end
 end
 
@@ -406,10 +387,7 @@ function love.keypressed(key, _, isrepeat)
     if key == "escape" then
         love.event.quit()
     elseif key == 'r' and not intro then
-        for i = #enemies.instances, 1, -1 do
-            table.clear(enemies.instances[i])
-            table.remove(enemies.instances, i)
-        end
+        enemies.instances = {}
         love.load()
     elseif key == 'd' then
         debug = not debug
@@ -435,9 +413,12 @@ function love.mousepressed(x, y, button)
         elseif button == 3 then
             hero:stop()
         elseif button == 2 then
+            local _x, _y = press_location_x - block_size / 2, press_location_y - block_size / 2
+
+            local flash = Flash.new(_x, _y)
             flash.sounds.hit:play()
-            table.insert(flashes, flash:create(press_location_x - block_size / 2, press_location_y - block_size / 2))
-            enemies:kill(enemies:get(press_location_x - block_size / 2, press_location_y - block_size / 2))
+            table.insert(flashes, flash)
+            enemies:kill(enemies:get(_x, _y))
         end
 
     elseif intro then

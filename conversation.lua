@@ -1,59 +1,7 @@
 require('globals')
 local table = require('ext_table')
-local world = require('world')
 
-printf = function(s,...)
-    return io.write(s:format(...))
-end -- function
-
-local function printtable(_table, indent)
-
-  indent = indent or 0;
-
-  local keys = {};
-
-  for k in pairs(_table) do
-    keys[#keys+1] = k;
-    table.sort(keys, function(a, b)
-      local ta, tb = type(a), type(b);
-      if (ta ~= tb) then
-        return ta < tb;
-      else
-        return a < b;
-      end
-    end);
-  end
-
-  print(string.rep('  ', indent)..'{');
-  indent = indent + 1;
-  for k, v in pairs(_table) do
-
-    local key = k;
-    if (type(key) == 'string') then
-      if not (string.match(key, '^[A-Za-z_][0-9A-Za-z_]*$')) then
-        key = "['"..key.."']";
-      end
-    elseif (type(key) == 'number') then
-      key = "["..key.."]";
-    end
-
-    if (type(v) == 'table') then
-      if (next(v)) then
-        printf("%s%s =", string.rep('  ', indent), tostring(key));
-        printtable(v, indent);
-      else
-        printf("%s%s = {},", string.rep('  ', indent), tostring(key));
-      end
-    elseif (type(v) == 'string') then
-      printf("%s%s = %s,", string.rep('  ', indent), tostring(key), "'"..v.."'");
-    else
-      printf("%s%s = %s,", string.rep('  ', indent), tostring(key), tostring(v));
-    end
-  end
-  indent = indent - 1;
-  print(string.rep('  ', indent)..'}');
-end
-
+---@class Conversation
 local conversation = {}
 conversation.__index = conversation
 
@@ -159,10 +107,12 @@ end
 
 function conversation:drawCurrent()
     local text = self:getCurrent()
-
     if text and text.talker then
-        local text_x = text.talker.x + world.block_size/2 - 16*7
-        local text_y = text.talker.y - 16 * text.height or 1 * 1.5
+        ---@type BaseActor
+        local talker = text.talker
+
+        local text_x = talker.x + block_size/2 - 16*7
+        local text_y = talker.y - 16 * text.height or 1 * 1.5
         local text_w = 16 * 14
         local font_size = 19
 

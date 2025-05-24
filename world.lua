@@ -1,12 +1,15 @@
+---@class world
 local world = {}
+---@class nodes
+local nodes = { nodes = {} }
 
 require('globals')
 local table = require('ext_table')
 
-local nodes = { -- represent walkable zones
-    nodes = {}
-}
+local sqrt = math.sqrt
+local random = love.math.random
 
+-- Tile constants
 local TILE_TREE  = 0
 local TILE_GRASS = 1
 local TILE_GRASS2= 2
@@ -16,232 +19,199 @@ local TILE_PINE  = 5
 local TILE_HOUSE = 6
 local TILE_TREE2 = 7
 
-local sqrt = math.sqrt
-
+-- Random tile aliases
 setmetatable(_G, {
-    __index = function(t, k)
+    __index = function(_, k)
         if k == 'TILE_GROUND' then
-            local arr = {TILE_GRASS, TILE_GRASS2}
-            return arr[love.math.random(#arr)]
+            local ground = {TILE_GRASS, TILE_GRASS2}
+            return ground[random(#ground)]
         elseif k == 'TILE_FOREST' then
-            local arr = {TILE_TREE, TILE_TREE2, TILE_PINE}
-            return arr[love.math.random(#arr)]
+            local forest = {TILE_TREE, TILE_TREE2, TILE_PINE}
+            return forest[random(#forest)]
         end
     end
 })
 
 local UNWALKABLE = {
-    TILE_TREE,
-    TILE_TREE2,
-    TILE_STONE,
-    TILE_BLACK,
-    TILE_PINE,
-    TILE_HOUSE
+    [TILE_TREE] = true,
+    [TILE_TREE2] = true,
+    [TILE_STONE] = true,
+    [TILE_BLACK] = true,
+    [TILE_PINE] = true,
+    [TILE_HOUSE] = true
 }
 
-function walkable(tile)
-    if tile ~= nil and table.not_in(UNWALKABLE, tile) then
-        return true
-    end
-    return false
+-- Walkable check
+local function walkable(tile)
+    return tile ~= nil and not UNWALKABLE[tile]
 end
 
-function nodes:generate_nodes()
+function nodes:generate_nodes(world)
     table.clear(self.nodes)
-    for i = 1, world.height, 1 do
-        for j = 1, world.width, 1 do
-            if world:walkable(j, i) then
-                if not self.nodes[j] then
-                    self.nodes[j] = {}
-                end
-                self.nodes[j][i] = {x=j, y=i}
+    for y = 1, world.height do
+        for x = 1, world.width do
+            if world:walkable(x, y) then
+                self.nodes[x] = self.nodes[x] or {}
+                self.nodes[x][y] = {x = x, y = y}
             end
         end
     end
 end
 
 function nodes:get(x, y)
-    if self.nodes[x] then
-        return self.nodes[x][y]
-    end
+    return self.nodes[x] and self.nodes[x][y]
 end
 
-function nodes:get_many(array, _array)
-    local nodes = {}
+function nodes:get_many(array)
+    local result = {}
     for i = 1, #array do
-        if self.nodes[array[i].x] then
-            local table_node = self.nodes[array[i].x][array[i].y]
-            if table_node then
-                table.insert(nodes, table_node)
-            end
-        end
+        local pos = array[i]
+        local n = self:get(pos.x, pos.y)
+        if n then result[#result + 1] = n end
     end
-    return nodes
+    return result
 end
 
 function world:init()
-    self.x = 0
-    self.y = 0
+    self.x, self.y = 0, 0
     self.generated = false
     self.width = 200
     self.height = 200
     self.block_size = block_size
     self.enemy_spawns = {}
-    self.r = 1
-    self.g = 1
-    self.b = 1
-
+    self.r, self.g, self.b = 1, 1, 1
     self.nodes = nodes
 end
 
 function world:flush_map()
-    if self.map ~= nil then
-        table.clear(self.map)
-    else
-        self.map = {}
-    end
-
-    for i = 1, self.height, 1 do
-        self.map[i] = {}
-        for j = 1, self.width, 1 do
-            self.map[i][j] = TILE_FOREST
+    self.map = {}
+    for y = 1, self.height do
+        local row = {}
+        for x = 1, self.width do
+            row[x] = TILE_FOREST
         end
+        self.map[y] = row
     end
 end
 
 function world:get_node(x, y)
-    if not self.map[y] then
-        return nil
-    end
-    return self.map[y][x]
+    return self.map[y] and self.map[y][x]
 end
 
 function world:walkable(x, y)
     return walkable(self:get_node(x, y))
 end
 
-function world:distance(node1, node2)
-    local dx = node1.x - node2.x
-    local dy = node1.y - node2.y
+function world:distance(a, b)
+    local dx, dy = a.x - b.x, a.y - b.y
     return sqrt(dx * dx + dy * dy)
+end
+
+function world:get_node_by_real_coords(x, y)
+    local b_s = self.block_size
+    return self.nodes:get(m_floor(x / b_s), m_floor(y / b_s))
 end
 
 function world:generate()
     self.generated = false
     self:flush_map()
 
-    -- initial hero location
-    local _x1 = love.math.random(world.width - world.width / 4, world.width - 5)
-    local _y1 = clamp(m_abs(world.height * love.math.random(0, 1) - love.math.random(world.height / 3)), world.height - 8, 16)
+    local init_x = random(self.width - self.width / 4, self.width - 5)
+    local init_y = clamp(m_abs(self.height * random(0, 1) - random(self.height / 3)), self.height - 8, 16)
 
-    local initial_x = _x1
-    local initial_y = _y1
+    local goal_x = random(self.width / 4)
+    local goal_y = m_abs(self.height * random(0, 1) - random(math.floor(self.height / 3)))
 
-    local c = 0
+    self.house_x, self.house_y = goal_x, goal_y
+    self.map[goal_y][goal_x] = TILE_HOUSE
 
-    -- endgame destination location
-    local _x2 = love.math.random(self.width / 4)
-    local _y2 = m_abs(self.height * love.math.random(0, 1) - love.math.random(self.height / 3))
+    local x, y = init_x, init_y
+    local complexity = 120
+    local step = 0
 
-    self.house_x = _x2
-    self.house_y = _y2
+    while x ~= goal_x or y ~= goal_y do
+        self.map[y][x] = TILE_GROUND
+        step = step + 1
 
-    self.map[_y2][_x2] = TILE_HOUSE
-
-    -- generate path from hero to destination
-    local world_complexity_level = 120
-    while _x1 ~= _x2 or _y1 ~= _y2 do
-        self.map[_y1][_x1] = TILE_GROUND
-
-        c = c + 1
-        if c % world_complexity_level ~= 0 then
-            local _r = love.math.random(4)
-            if _r == 1 then
-                _y1 = _y1 + 1
-            elseif _r == 2 then
-                _x1 = _x1 + 1
-            elseif _r == 3 then
-                _y1 = _y1 - 1
-            elseif _r == 4 then
-                _x1 = _x1 - 1
-            end
+        if step % complexity ~= 0 then
+            -- Random movement
+            local directions = {
+                {x=0,  y=1},
+                {x=1,  y=0},
+                {x=0,  y=-1},
+                {x=-1, y=0},
+                {x=1,  y=1},
+                {x=1,  y=-1},
+                {x=-1,  y=1},
+                {x=-1, y=-1}
+            }
+            local dir = directions[random(8)]
+            x = x + dir.x
+            y = y + dir.y
         else
-            _x1 = _x1 + sign(_x2 - _x1)
-            self.map[_y1][_x1] = TILE_GRASS
-            _y1 = _y1 + sign(_y2 - _y1)
+            -- Goal directed movement
+            x = x + sign(goal_x - x)
+            self.map[y][x] = TILE_GRASS
+            y = y + sign(goal_y - y)
         end
 
-        _x1 = clamp(_x1, self.width, 1)
-        _y1 = clamp(_y1, self.height, 1)
+        x = clamp(x, self.width, 1)
+        y = clamp(y, self.height, 1)
     end
 
-    -- place stones
-    local stones_count = love.math.random(50, 100)
-    for _ = 1, stones_count do
-        local r_y = nil
-        local r_x = nil
-        while not self:walkable(r_x, r_y) do
-            r_y = love.math.random(1, self.height)
-            r_x = love.math.random(1, self.width)
-        end
-        -- make zone around stone walkable
-        for __y = -1, 1 do
-            for __x = -1, 1 do
-                if self.map[r_y + __y] and not walkable(self.map[r_y + __y][r_x + __x]) then
-                    self.map[r_y + __y][r_x + __x] = TILE_GROUND
+    -- Stones
+    for _ = 1, random(50, 100) do
+        local sx, sy
+        repeat
+            sx = random(1, self.width)
+            sy = random(1, self.height)
+        until self:walkable(sx, sy)
+
+        for dy = -1, 1 do
+            for dx = -1, 1 do
+                local nx, ny = sx + dx, sy + dy
+                if self.map[ny] and not self:walkable(nx, ny) then
+                    self.map[ny][nx] = TILE_GROUND
                 end
             end
         end
-        self.map[r_y][r_x] = TILE_STONE
+        self.map[sy][sx] = TILE_STONE
     end
 
-    -- place hero at initial position and make zone around walkable
-    _x1 = initial_x
-    _y1 = initial_y
+    -- Hero spawn
+    for i = 1, 7 do
+        self.map[init_y - i][init_x] = TILE_GROUND
+    end
+    self.spawn_x = init_x
+    self.spawn_y = init_y - 7
 
-    self.map[_y1 - 1][_x1] = TILE_GROUND
-    self.map[_y1 - 2][_x1] = TILE_GROUND
-    self.map[_y1 - 3][_x1] = TILE_GROUND
-    self.map[_y1 - 4][_x1] = TILE_GROUND
-    self.map[_y1 - 5][_x1] = TILE_GROUND
-    self.map[_y1 - 6][_x1] = TILE_GROUND
-    self.map[_y1 - 7][_x1] = TILE_GROUND
-    self.spawn_x = _x1
-    self.spawn_y = _y1 - 7
-
-    -- place enemies
-    for i = 1, love.math.random(13, 18) do
-        local e_x = love.math.random(world.width / 4, world.width - world.width / 3)
-        local e_y
-        while e_y == nil do
-            local temp = love.math.random(world.height)
-            if self:walkable(e_x, temp) then
-                e_y = temp
-            end
-        end
-        self.enemy_spawns[i] = {x=e_x, y=e_y}
+    -- Enemies
+    for i = 1, random(13, 18) do
+        local ex = random(math.floor(self.width / 4), self.width - math.floor(self.width / 3))
+        local ey
+        repeat
+            local temp = random(self.height)
+            if self:walkable(ex, temp) then ey = temp end
+        until ey
+        self.enemy_spawns[i] = {x = ex, y = ey}
     end
 
-    self.nodes:generate_nodes()
+    self.nodes:generate_nodes(self)
     self.generated = true
 end
 
 function world:generate_savecode()
     local str = "local world = require('world') world.map = {\n"
-    local map = self.map
-    for x = 1, #map do
+    for y = 1, #self.map do
+        local row = self.map[y]
         str = str .. "\t{ "
-        for y = 1, #map[1] do
-            str = str .. tostring(map[x][y])
-            if y < #map[1] then
-                str = str.. ", "
-            end
+        for x = 1, #row do
+            str = str .. tostring(row[x])
+            if x < #row then str = str .. ", " end
         end
         str = str .. " },\n"
     end
-    str = str .. " \n}"
-
-    return str
+    return str .. " \n}"
 end
 
 return world

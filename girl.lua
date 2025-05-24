@@ -1,5 +1,7 @@
+---@type BaseActor
 local BaseActor = require('baseActor')
 
+---@class Girl
 local Girl = setmetatable({}, { __index = BaseActor })
 Girl.__index = Girl
 

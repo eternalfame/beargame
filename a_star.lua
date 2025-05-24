@@ -1,3 +1,4 @@
+---@class a_star
 local a_star = {}
 
 require('globals')
@@ -31,21 +32,16 @@ local function neighbor_nodes(_current)
     local c_x = _current.x
     local c_y = _current.y
 
-    local array = {}
-    local arr_size = #array
-
-    for x = c_x-1, c_x+1 do
-        for y = c_y-1, c_y+1 do
-            if not (x == c_x and y == c_y) then
-                if world:walkable(x, y) then
-                    arr_size = arr_size + 1
-                    array[arr_size] = {x=x,y=y}
-                end
+    local coords_to_get = {}
+    for dx = -1, 1 do
+        for dy = -1, 1 do
+            if not (dx == 0 and dy == 0) then
+                table.insert(coords_to_get, {x = c_x + dx, y = c_y + dy})
             end
         end
     end
-    local _nodes = world.nodes:get_many(array, arr_size)
-    return _nodes
+    -- returns only walkable nodes
+    return world.nodes:get_many(coords_to_get)
 end
 
 local function reconstruct(map, goal, start)
@@ -60,9 +56,8 @@ local function reconstruct(map, goal, start)
 end
 
 function a_star:find(from, to)
-    local b_s = world.block_size
-    local start = world.nodes:get(m_floor(from.x / b_s), m_floor(from.y / b_s))
-    local goal = world.nodes:get(m_floor(to.x / b_s), m_floor(to.y / b_s))
+    local start = world:get_node_by_real_coords(from.x, from.y)
+    local goal = world:get_node_by_real_coords(to.x, to.y)
     if not goal then
         return {}
     end

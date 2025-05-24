@@ -1,19 +1,19 @@
+---@class pointer
 local pointer = {
     x=nil,
     y=nil,
 }
 
 require('globals')
-local world = require('world')
 
 function pointer:init()
-    self.model = love.graphics.newCanvas(world.block_size, world.block_size)
+    self.model = love.graphics.newCanvas(block_size, block_size)
 
     self.model:renderTo(function ()
         love.graphics.clear()
         love.graphics.setBlendMode('alpha', 'premultiplied')
 		love.graphics.setColor(255, 255, 0, 0.5)
-		love.graphics.rectangle('fill', 0, 0, world.block_size, world.block_size)
+		love.graphics.rectangle('fill', 0, 0, block_size, block_size)
     end)
 end
 

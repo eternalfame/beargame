@@ -1,3 +1,4 @@
+---@class camera
 local camera = {}
 camera.layers = {}
 camera.x = 0

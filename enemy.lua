@@ -1,19 +1,23 @@
 require('globals')
+---@type BaseActor
 local BaseActor = require('baseActor')
 local world = require('world')
 local table = require('ext_table')
 
+---@class Enemy
 local Enemy = {}
 Enemy.__index = Enemy
 
 Enemy.sounds = {
     dead = love.audio.newSource("fx/death.ogg", "static")
 }
+
+---@type BaseActor[]
 Enemy.instances = {}  -- store all enemy instances here
 
 function Enemy.new()
     local self = setmetatable({}, Enemy)
-
+    self.instances = {}
     self:init()
     return self
 end
@@ -21,7 +25,8 @@ end
 function Enemy:init()
     self.sounds.dead:setVolume(0.5)
 
-    for i, spawn in ipairs(world.enemy_spawns) do
+    for _, spawn in ipairs(world.enemy_spawns) do
+        ---@type BaseActor
         local enemy = BaseActor:new()
         enemy.image = love.graphics.newImage("img/inverted.png")
         enemy:init()
@@ -32,6 +37,7 @@ function Enemy:init()
 end
 
 function Enemy:get(x, y)
+    ---@param instance BaseActor
     for _, instance in ipairs(self.instances) do
         if instance and not instance.dead then
             local dx = math.abs(x - instance.x)
@@ -46,6 +52,7 @@ function Enemy:get(x, y)
     return nil
 end
 
+---@param instance BaseActor
 function Enemy:kill(instance)
     if instance and not instance.dead then
         self.sounds.dead:stop()

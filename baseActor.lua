@@ -1,3 +1,4 @@
+---@class BaseActor
 local BaseActor = {}
 BaseActor.__index = BaseActor
 
@@ -191,11 +192,13 @@ function BaseActor:process()
         end
     else
         if self.opacity == 0 then
-            return
+            return false
         end
         self.opacity = clamp(self.opacity - 0.1, self.opacity, 0)
         self:updateFrame()
     end
+
+    return true
 end
 
 return BaseActor
