@@ -1,7 +1,7 @@
 ---@type BaseActor
-local BaseActor = require('BaseActor')
+local BaseActor = require('entities.baseActor')
 ---@type pointer
-local pointer = require('pointer')
+local pointer = require('systems.pointer')
 
 ---@class Hero
 local Hero = setmetatable({}, { __index = BaseActor })
@@ -12,6 +12,7 @@ function Hero.new()
     setmetatable(self, Hero)
 
     self.image = love.graphics.newImage("img/hero.png")
+    self.find_time = 0
     self:init()
 
     return self
@@ -23,9 +24,9 @@ function Hero:stop()
 end
 
 function Hero:setTarget(goal)
-    time_delta1 = os.clock()
+    local t = os.clock()
     BaseActor.setTarget(self, goal)
-    time_delta1 = os.clock() - time_delta1
+    self.find_time = os.clock() - t
 end
 
 return Hero

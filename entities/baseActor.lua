@@ -2,10 +2,11 @@
 local BaseActor = {}
 BaseActor.__index = BaseActor
 
-local a_star = require('a_star')
-local world = require('world')
-local table = require('ext_table')
-require('globals')
+local a_star = require('systems.a_star')
+local world = require('systems.world')
+local table = require('core.ext_table')
+local config = require('config')
+local util = require('core.util')
 
 function BaseActor.new()
     local self = setmetatable({}, BaseActor)
@@ -31,10 +32,11 @@ function BaseActor.new()
 end
 
 function BaseActor:init()
-    self:setSpeed(6)
+    self:setSpeed(config.speed.default)
     self.image:setFilter("nearest", "linear")
     self.tile_count = (self.image:getWidth() * 3) / self.image:getHeight()
 
+    local t_size = config.t_size
     for j, letter in ipairs({'h', 'b', 't'}) do
         self.frames[letter] = {}
         for i = 0, self.tile_count - 1 do
@@ -49,7 +51,7 @@ function BaseActor:init()
 end
 
 function BaseActor:setSpeed(speed)
-    self.del = 48.0 / speed
+    self.del = config.block_size / speed
 end
 
 function BaseActor:currentFrame()
@@ -127,7 +129,7 @@ function BaseActor:updateFrame()
         love.graphics.clear()
         love.graphics.setBlendMode('alpha')
         love.graphics.setColor(1, 1, 1, self.opacity)
-        local sx = world.block_size / t_size
+        local sx = world.block_size / config.t_size
         if self.align == 'r' then
             love.graphics.draw(self.image, self:currentFrame(), 0, 0, 0, sx, sx)
         else
@@ -148,7 +150,7 @@ function BaseActor:process()
             if self.frame % 7 == 0 then
                 self.step_sound = self.step_sound or love.audio.newSource("fx/step.ogg", "static")
                 self.step_sound:setVolume(0.025)
-                self.step_sound:setPosition(self.x / 400, self.y / 400, 0)
+                self.step_sound:setPosition(self.x / config.audio_scale, self.y / config.audio_scale, 0)
                 self.step_sound:play()
             end
 
@@ -194,7 +196,7 @@ function BaseActor:process()
         if self.opacity == 0 then
             return false
         end
-        self.opacity = clamp(self.opacity - 0.1, self.opacity, 0)
+        self.opacity = util.clamp(self.opacity - 0.1, 0, self.opacity)
         self:updateFrame()
     end
 

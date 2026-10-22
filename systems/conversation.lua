@@ -1,5 +1,5 @@
-require('globals')
-local table = require('ext_table')
+local config = require('config')
+local table = require('core.ext_table')
 
 ---@class Conversation
 local conversation = {}
@@ -111,7 +111,7 @@ function conversation:drawCurrent()
         ---@type BaseActor
         local talker = text.talker
 
-        local text_x = talker.x + block_size/2 - 16*7
+        local text_x = talker.x + config.block_size/2 - 16*7
         local text_y = talker.y - 16 * text.height or 1 * 1.5
         local text_w = 16 * 14
         local font_size = 19

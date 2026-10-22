@@ -1,9 +1,8 @@
 ---@class a_star
 local a_star = {}
 
-require('globals')
-local world = require('world')
-local table = require('ext_table')
+local world = require('systems.world')
+local table = require('core.ext_table')
 
 local INF = 1/0
 

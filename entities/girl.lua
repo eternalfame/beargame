@@ -1,5 +1,5 @@
 ---@type BaseActor
-local BaseActor = require('baseActor')
+local BaseActor = require('entities.baseActor')
 
 ---@class Girl
 local Girl = setmetatable({}, { __index = BaseActor })
