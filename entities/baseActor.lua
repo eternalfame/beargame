@@ -163,13 +163,16 @@ function BaseActor:process()
 
             -- Move towards next node
             local delta = bs / self.del
-            self.x = self.x + (next_node.x - node.x) * delta
-            self.y = self.y + (next_node.y - node.y) * delta
+            local dx = next_node.x - node.x
+            local dy = next_node.y - node.y
+            local dist = math.sqrt(dx * dx + dy * dy)
+            self.x = self.x + (dx / dist) * delta
+            self.y = self.y + (dy / dist) * delta
 
-            -- Snap if close enough
-            local dx = abs(self.x - next_node.x * bs)
-            local dy = abs(self.y - next_node.y * bs)
-            if dx < delta and dy < delta then
+            -- Snap if close enough (use Euclidean distance for diagonal moves)
+            local dx = self.x - next_node.x * bs
+            local dy = self.y - next_node.y * bs
+            if math.sqrt(dx * dx + dy * dy) < delta then
                 self.node = next_node
                 self.x = next_node.x * bs
                 self.y = next_node.y * bs

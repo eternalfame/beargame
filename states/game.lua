@@ -225,8 +225,8 @@ function game.update(dt)
         end
     end
 
-    local cam_x = clamp(hero.x + world.block_size / 2  - scr_w / 2, world.block_size, max_c_x)
-    local cam_y = clamp(hero.y + world.block_size / 2 - scr_h / 2, world.block_size, max_c_y)
+    local cam_x = m_floor(clamp(hero.x + world.block_size / 2  - scr_w / 2, world.block_size, max_c_x))
+    local cam_y = m_floor(clamp(hero.y + world.block_size / 2 - scr_h / 2, world.block_size, max_c_y))
     camera:setPosition(cam_x, cam_y)
 end
 
